@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\PendingApprove;
 use App\Entity\User;
 use App\Form\RegistrationFormType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,7 @@ class RegistrationController extends AbstractController
     public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager): Response
     {
         $user = new User();
+        $pending = new PendingApprove();
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
 
@@ -29,8 +31,21 @@ class RegistrationController extends AbstractController
                 )
             );
 
-            $entityManager->persist($user);
+            $email = $form->get('email')->getData();
+            
+            $pending->setEmail($email);
+            $pending->setPassword($userPasswordHasher->hashPassword(
+                $user,
+                $form->get('plainPassword')->getData()
+            ));
+
+
+            // attendre autorisation admin
+            $entityManager->persist($pending);
             $entityManager->flush();
+
+            // $entityManager->persist($user);
+            // $entityManager->flush();
 
             // do anything else you need here, like send an email
 
